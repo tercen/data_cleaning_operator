@@ -6,25 +6,62 @@
   "urls": ["https://github.com/tercen/template_R_operator"],
   "properties": [
    {
-    "kind": "StringProperty",
-    "name": "string_example",
-    "defaultValue": "example",
-    "description": "description parameter 1"
-    },
-    {
     "kind": "EnumeratedProperty",
-    "name": "list_example",
-    "defaultValue": "value1",
+    "name": "file_type",
+    "defaultValue": "Excel",
     "values": [
-      "value1",
-      "StringProperty",
-      "DoubleProperty",
-      "BooleanProperty",
-      "EnumeratedProperty"
+      "Excel",
+      "Text"
     ],
-    "description": "description parameter 2"
+    "description": "Input file type."
+  },
+     {
+    "kind": "DoubleProperty",
+    "name": "max_missing_prop_rows",
+    "defaultValue": 0.10,
+    "description": "Maximal proportion of missing data per row."
+  },
+     {
+    "kind": "DoubleProperty",
+    "name": "max_missing_prop_rows",
+    "defaultValue": 0.10,
+    "description": "Maximal proportion of missing data per row."
+  },
+     {
+    "kind": "DoubleProperty",
+    "name": "min_categories",
+    "defaultValue": 1,
+    "description": "Minimal number of categories per column."
+  },
+     {
+    "kind": "DoubleProperty",
+    "name": "max_categories",
+    "defaultValue": 25,
+    "description": "Maximal number of categories per column."
+  },
+   {
+    "kind": "EnumeratedProperty",
+    "name": "numeric_encoding",
+    "defaultValue": "one hot encoding",
+    "values": [
+      "None",
+      "one hot encoding",
+      "label encoding"
+    ],
+    "description": "Type of numeric encoding of categorical variables."
+  },
+    {
+    "kind": "StringProperty",
+    "name": "date_time",
+    "defaultValue": "TRUE",
+    "description": "Convert dates as time."
+  },
+    {
+    "kind": "StringProperty",
+    "name": "date_weekday",
+    "defaultValue": "TRUE",
+    "description": "Convert dates as week days."
   }
   ]
 }
-
 

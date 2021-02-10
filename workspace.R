@@ -1,7 +1,8 @@
 library(tercen)
 library(dplyr)
-require(tidyr)
+library(tidyr)
 library(lubridate)
+library(caret)
 
 options("tercen.workflowId" = "2553cb89b6ec3bc593e238e0df047713")
 options("tercen.stepId"     = "f0f7c34d-e438-459f-be32-fcde2a205abe")
@@ -19,18 +20,19 @@ max_missing_prop_rows <- 0.10
 if(!is.null(ctx$op.value('max_missing_prop_rows'))) max_missing_prop_rows <- as.numeric(ctx$op.value('max_missing_prop_rows'))
 max_missing_prop_cols <- 0.10
 if(!is.null(ctx$op.value('max_missing_prop_cols'))) max_missing_prop_cols <- as.numeric(ctx$op.value('max_missing_prop_cols'))
+
 min_categories <- 2
 if(!is.null(ctx$op.value('min_categories'))) min_categories <- as.numeric(ctx$op.value('min_categories'))
 max_categories <- 25
 if(!is.null(ctx$op.value('max_categories'))) max_categories <- as.numeric(ctx$op.value('max_categories'))
-numeric_encoding <- "None" # or One-hot, or Label
+numeric_encoding <- "one hot encoding" # or One-hot, or Label
 if(!is.null(ctx$op.value('numeric_encoding'))) numeric_encoding <- (ctx$op.value('numeric_encoding'))
 
 date_factor <- FALSE 
 if(!is.null(ctx$op.value('date_factor'))) date_factor <- as.logical(ctx$op.value('numeric_encoding'))
 date_time <- TRUE
 if(!is.null(ctx$op.value('date_time'))) date_time <- as.logical(ctx$op.value('date_time'))
-date_weekday <- FALSE
+date_weekday <- TRUE
 if(!is.null(ctx$op.value('date_weekday'))) date_weekday <- as.logical(ctx$op.value('date_weekday'))
 date_day <- FALSE
 if(!is.null(ctx$op.value('date_day'))) date_day <- as.logical(ctx$op.value('date_day'))
@@ -54,59 +56,68 @@ df <- as_tibble(client$tableSchemaService$select(schema$id, list(), 0, schema$nR
 df <- df[, colSums(is.na(df)) / nrow(df) <  max_missing_prop_cols]
 df <- df[rowSums(is.na(df)) / ncol(df) <  max_missing_prop_cols, ]
 
-## convert types
+df_out <- data.frame(id = seq_len(nrow(df)))
 
+## numeric data preprocessing
 l1 <- vars_names[vars_types == "Numeric"]
 l1 <- l1[l1 %in% colnames(df)]
+
+df_num <- df %>%
+  select(l1) %>%
+  transmute_all(as.numeric) %>%
+  mutate_all(~ifelse(is.na(.x), mean(.x, na.rm = TRUE), .x))
+
+df_out <- cbind(df_out, df_num)
+
+## categories preprocessing
 l2 <- vars_names[vars_types == "Categorical"]
 l2 <- l2[l2 %in% colnames(df)]
 ## min max categories
 lst <- unlist(lapply(df[,l2], function(x) length(unique(x))))
 l2 <- names(which(lst >= min_categories & lst <= max_categories))
 
+df_cat <- df %>% select(l2)
+if(numeric_encoding == "one hot encoding") {
+  dv <- caret::dummyVars(~ ., data = df_cat)
+  df_cat <- data.frame(predict(dv, newdata = df_cat))
+}
+
+df_out <- cbind(df_out, df_cat)
+
+## date preprocessing
 l3 <- vars_names[vars_types == "Date"]
 l3 <- l3[l3 %in% colnames(df)]
 
 # c. dates
-date_var <- var_info$Name[var_info$Type == "Date" & var_info$`X or Y` == "X"]
-date_var <- date_var[date_var %in% colnames(df)]
-df_date <- df[, date_var]
+df_date_in <- df %>% select(l3)
+df_date <- list(id = seq_len(nrow(df_date_in)))
 
-lst <- lapply(df_date, function(x) { hour(x) + minute(x) / 60})
-names(lst) <- paste0(names(lst), "_time")
-lst2 <- lapply(df_date, function(x) {
-  wday(x, label = TRUE)
-})
-names(lst2) <- paste0(names(lst2), "_weekday")
+if(date_time) {
+  lst <- lapply(df_date_in, function(x) { 
+    x <- lubridate::as_date(x)
+    out <- hour(x) + minute(x) / 60
+    return(out)
+  })
+  names(lst) <- paste0(names(lst), "_time")
+  df_date <- cbind(df_date, as.data.frame(df_time))
+}
+if(date_weekday) {
+  lst <- lapply(df_date_in, function(x) { 
+    x <- lubridate::as_date(x)
+    out <- wday(x, label = TRUE)
+    return(out)
+  })
+  names(lst) <- paste0(names(lst), "_weekday")
+  df_date <- cbind(df_date, as.data.frame(df_weekday))
+}
 
-df_date <- as.data.frame(list(lst, lst2))
+df_date$id <- NULL
 
+df_out <- cbind(df_out, df_date)
 
-df_out <-
-  
-df %>%
-  select(l1, l2, l3) %>%
-  mutate_each_(funs(as.numeric), l1) %>%
-  mutate_each_(funs(factor), l2) %>%
-  mutate_each_(funs(as.Date), l3) 
-  
+df_out$id <- NULL
 
-
-## numeric encoding
-library(tidyr)
-library(dplyr)
-dt %>% mutate(value = 1) %>% #spread(subject, group, value,  fill = 0 ) 
- pivot_wider(#id_cols = group, 
-             names_from = c(subject, group), 
-             values_from = c(value,value),
-             values_fill = 0)
-do(pivot.all(.))
-?pivot_wider_spec()
-
-## date encoding
-
-
-## return data
-df_out %>% 
+df_out %>%
+  mutate(.ci = 0) %>%
   ctx$addNamespace() %>%
   ctx$save()
