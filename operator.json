@@ -1,9 +1,9 @@
 {
-  "name": "Template R operator",
-  "description": "Return the medium value of a cell",
-  "tags": ["template"],
+  "name": "Data cleaning operator",
+  "description": "Import and prepare data for machine learning applications.",
+  "tags": ["data wrangling"],
   "authors": ["tercen"],
-  "urls": ["https://github.com/tercen/template_R_operator"],
+  "urls": ["https://github.com/tercen/data_cleaning_operator"],
   "properties": [
    {
     "kind": "EnumeratedProperty",
