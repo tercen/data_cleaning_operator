@@ -23,14 +23,14 @@
   },
      {
     "kind": "DoubleProperty",
-    "name": "max_missing_prop_rows",
+    "name": "max_missing_prop_cols",
     "defaultValue": 0.10,
-    "description": "Maximal proportion of missing data per row."
+    "description": "Maximal proportion of missing data per columns."
   },
      {
     "kind": "DoubleProperty",
     "name": "min_categories",
-    "defaultValue": 1,
+    "defaultValue": 2,
     "description": "Minimal number of categories per column."
   },
      {
