@@ -50,18 +50,20 @@ df <- as_tibble(client$tableSchemaService$select(schema$id, list(), 0, schema$nR
 df <- df[, colSums(is.na(df)) / nrow(df) <  max_missing_prop_cols]
 df <- df[rowSums(is.na(df)) / ncol(df) <  max_missing_prop_cols, ]
 
-df_out <- data.frame(id = seq_len(nrow(df)))
+df_out <- data.frame(rowId = seq_len(nrow(df)))
 
 ## numeric data preprocessing
 l1 <- vars_names[vars_types == "Numeric"]
 l1 <- l1[l1 %in% colnames(df)]
 
-df_num <- df %>%
-  select(all_of(l1)) %>%
-  transmute_all(as.numeric) %>%
-  mutate_all(~ifelse(is.na(.x), mean(.x, na.rm = TRUE), .x))
-
-df_out <- cbind(df_out, df_num)
+if(length(l1) > 0) {
+  df_num <- df %>%
+    select(all_of(l1)) %>%
+    transmute_all(as.numeric) %>%
+    mutate_all(~ifelse(is.na(.x), mean(.x, na.rm = TRUE), .x))
+  
+  df_out <- cbind(df_out, df_num)
+}
 
 ## categories preprocessing
 l2 <- vars_names[vars_types == "Categorical"]
@@ -70,46 +72,50 @@ l2 <- l2[l2 %in% colnames(df)]
 lst <- unlist(lapply(df[, l2], function(x) length(unique(x))))
 l2 <- names(which(lst >= min_categories & lst <= max_categories))
 
-df_cat <- df %>% select(all_of(l2))
-if(numeric_encoding == "one hot encoding") {
-  dv <- caret::dummyVars(~ ., data = df_cat)
-  df_cat <- data.frame(predict(dv, newdata = df_cat))
+if(length(l2) > 0) {
+  df_cat <- df %>% select(all_of(l2))
+  if(numeric_encoding == "one hot encoding") {
+    dv <- caret::dummyVars(~ ., data = df_cat)
+    df_cat <- data.frame(predict(dv, newdata = df_cat))
+  }
+  df_out <- cbind(df_out, df_cat)
 }
-
-df_out <- cbind(df_out, df_cat)
-
+  
 ## date preprocessing
 l3 <- vars_names[vars_types == "Date"]
 l3 <- l3[l3 %in% colnames(df)]
 
-# c. dates
-df_date_in <- df %>% select(all_of(l3))
-df_date <- list(id = seq_len(nrow(df_date_in)))
-
-if(date_time) {
-  df_time <- lapply(df_date_in, function(x) { 
-    x <- lubridate::as_date(x)
-    out <- hour(x) + minute(x) / 60
-    return(out)
-  })
-  names(df_time) <- paste0(names(df_time), "_time")
-  df_date <- cbind(df_date, as.data.frame(df_time))
+if(length(l3) > 0) {
+  # c. dates
+  df_date_in <- df %>% select(all_of(l3))
+  df_date <- list(id = seq_len(nrow(df_date_in)))
+  
+  if(date_time) {
+    df_time <- lapply(df_date_in, function(x) { 
+      x <- lubridate::as_date(x)
+      out <- hour(x) + minute(x) / 60
+      return(out)
+    })
+    names(df_time) <- paste0(names(df_time), "_time")
+    df_date <- cbind(df_date, as.data.frame(df_time))
+  }
+  if(date_weekday) {
+    df_weekday <- lapply(df_date_in, function(x) { 
+      x <- lubridate::as_date(x)
+      out <- wday(x, label = TRUE)
+      return(out)
+    })
+    names(df_weekday) <- paste0(names(df_weekday), "_weekday")
+    df_date <- cbind(df_date, as.data.frame(df_weekday))
+  }
+  
+  df_date$id <- NULL
+  
+  df_out <- cbind(df_out, df_date)
+  
 }
-if(date_weekday) {
-  df_weekday <- lapply(df_date_in, function(x) { 
-    x <- lubridate::as_date(x)
-    out <- wday(x, label = TRUE)
-    return(out)
-  })
-  names(df_weekday) <- paste0(names(df_weekday), "_weekday")
-  df_date <- cbind(df_date, as.data.frame(df_weekday))
-}
 
-df_date$id <- NULL
-
-df_out <- cbind(df_out, df_date)
-
-df_out$id <- NULL
+# df_out$rowId <- NULL
 
 df_out %>%
   mutate(.ci = 0) %>%
