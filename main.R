@@ -57,7 +57,7 @@ l1 <- vars_names[vars_types == "Numeric"]
 l1 <- l1[l1 %in% colnames(df)]
 
 df_num <- df %>%
-  select(l1) %>%
+  select(all_of(l1)) %>%
   transmute_all(as.numeric) %>%
   mutate_all(~ifelse(is.na(.x), mean(.x, na.rm = TRUE), .x))
 
@@ -67,10 +67,10 @@ df_out <- cbind(df_out, df_num)
 l2 <- vars_names[vars_types == "Categorical"]
 l2 <- l2[l2 %in% colnames(df)]
 ## min max categories
-lst <- unlist(lapply(df[,l2], function(x) length(unique(x))))
+lst <- unlist(lapply(df[, l2], function(x) length(unique(x))))
 l2 <- names(which(lst >= min_categories & lst <= max_categories))
 
-df_cat <- df %>% select(l2)
+df_cat <- df %>% select(all_of(l2))
 if(numeric_encoding == "one hot encoding") {
   dv <- caret::dummyVars(~ ., data = df_cat)
   df_cat <- data.frame(predict(dv, newdata = df_cat))
@@ -83,25 +83,25 @@ l3 <- vars_names[vars_types == "Date"]
 l3 <- l3[l3 %in% colnames(df)]
 
 # c. dates
-df_date_in <- df %>% select(l3)
+df_date_in <- df %>% select(all_of(l3))
 df_date <- list(id = seq_len(nrow(df_date_in)))
 
 if(date_time) {
-  lst <- lapply(df_date_in, function(x) { 
+  df_time <- lapply(df_date_in, function(x) { 
     x <- lubridate::as_date(x)
     out <- hour(x) + minute(x) / 60
     return(out)
   })
-  names(lst) <- paste0(names(lst), "_time")
+  names(df_time) <- paste0(names(df_time), "_time")
   df_date <- cbind(df_date, as.data.frame(df_time))
 }
 if(date_weekday) {
-  lst <- lapply(df_date_in, function(x) { 
+  df_weekday <- lapply(df_date_in, function(x) { 
     x <- lubridate::as_date(x)
     out <- wday(x, label = TRUE)
     return(out)
   })
-  names(lst) <- paste0(names(lst), "_weekday")
+  names(df_weekday) <- paste0(names(df_weekday), "_weekday")
   df_date <- cbind(df_date, as.data.frame(df_weekday))
 }
 
