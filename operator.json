@@ -61,6 +61,12 @@
     "name": "date_weekday",
     "defaultValue": "TRUE",
     "description": "Convert dates as week days."
+  },
+  {
+    "kind": "StringProperty",
+    "name": "passthrough",
+    "defaultValue": "",
+    "description": "Comma-separated list of names of variables to be passed through."
   }
   ]
 }

@@ -35,6 +35,10 @@ if(!is.null(ctx$op.value('date_month'))) date_month <- as.logical(ctx$op.value('
 date_year <- FALSE
 if(!is.null(ctx$op.value('date_year'))) date_year <- as.logical(ctx$op.value('date_year'))
 
+passthrough <- "Side"
+if(!is.null(ctx$op.value('passthrough'))) date_year <- (ctx$op.value('passthrough'))
+passthrough <- strsplit(passthrough, ",")[[1]]
+
 rows <- ctx$rselect()
 
 vars_names <- rows[[grep("nam", colnames(rows), ignore.case = TRUE)[1]]]
@@ -114,6 +118,9 @@ if(length(l3) > 0) {
   df_out <- cbind(df_out, df_date)
   
 }
+
+## passthrough
+if(length(passthrough) > 0) df_out <- cbind(df_out, df[, passthrough])
 
 # df_out$rowId <- NULL
 
